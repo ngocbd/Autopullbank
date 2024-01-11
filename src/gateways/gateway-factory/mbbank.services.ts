@@ -97,17 +97,21 @@ export class MBBankService extends Gate {
       .subtract(7, 'days')
       .format('DD/MM/YYYY');
     const toDate = moment().tz('Asia/Ho_Chi_Minh').format('DD/MM/YYYY');
+    const refNo =
+      this.config.account.toUpperCase() +
+      moment().tz('Asia/Ho_Chi_Minh').format('DDMMYYYYHHmmssSSS');
     const dataSend = {
       accountNo: this.config.account,
       fromDate,
       toDate,
       sessionId: this.sessionId,
-      refNo: moment().tz('Asia/Ho_Chi_Minh').format('DDMMYYYYHHmmssSSS'),
+      refNo,
       deviceIdCommon: this.deviceId,
     };
 
     const { data } = await axios.post<MbBankTransactionDto>(
-      'https://online.mbbank.com.vn/api/retail-web-transactionservice/transaction/getTransactionAccountHistory',
+      'https://online.mbbank.com.vn/api/retail-transactionms/transactionms/get-account-transaction-history',
+
       dataSend,
       {
         headers: {
@@ -118,10 +122,12 @@ export class MBBankService extends Gate {
           Accept: 'application/json, text/plain, */*',
           Authorization:
             'Basic RU1CUkVUQUlMV0VCOlNEMjM0ZGZnMzQlI0BGR0AzNHNmc2RmNDU4NDNm',
+          Deviceid: this.deviceId,
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
           Origin: 'https://online.mbbank.com.vn',
           Referer: 'https://online.mbbank.com.vn/',
+          Refno: refNo,
           'Content-Type': 'application/json; charset=UTF-8',
         },
       },
