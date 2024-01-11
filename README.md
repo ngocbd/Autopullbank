@@ -35,6 +35,8 @@
 ## Tạo file config/config.yml
 
 - Xem ví dụ tại config/config.example.yml
+- Hướng dẫn chi tiết: https://wfb4kugxtf8.sg.larksuite.com/docx/Q5YxdjGg0omawaxkGiElo4mhgnb
+- Trợ giúp: https://www.facebook.com/groups/1798425277237936
 
 ## Khởi chạy với docker
 
