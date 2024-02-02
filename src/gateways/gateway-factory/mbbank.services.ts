@@ -43,9 +43,10 @@ export class MBBankService extends Gate {
     });
     this.context = await this.browser.newContext();
     this.page = await this.context.newPage();
-
+    console.log('Mb bank login...');
     const getCaptchaWaitResponse = this.page.waitForResponse(
       '**/retail-web-internetbankingms/getCaptchaImage',
+      { timeout: 60000 },
     );
     await this.page.goto('https://online.mbbank.com.vn/pl/login');
 
