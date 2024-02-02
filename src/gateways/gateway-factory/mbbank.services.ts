@@ -28,7 +28,6 @@ interface MbBankTransactionDto {
     transactionType: string;
   }[];
 }
-
 @Injectable()
 export class MBBankService extends Gate {
   private sessionId: string | null | undefined;
@@ -69,7 +68,7 @@ export class MBBankService extends Gate {
     await this.page.getByPlaceholder('NHẬP MÃ KIỂM TRA').fill(captchaText);
 
     const loginWaitResponse = this.page.waitForResponse(
-      '**/retail_web/internetbanking/doLogin',
+      'https://online.mbbank.com.vn/api/retail_web/internetbanking/v2.0/doLogin',
     );
 
     await this.page.getByRole('button', { name: 'Đăng nhập' }).click();
