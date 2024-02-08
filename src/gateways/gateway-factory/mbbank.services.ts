@@ -69,7 +69,7 @@ export class MBBankService extends Gate {
     await this.page.getByPlaceholder('NHẬP MÃ KIỂM TRA').fill(captchaText);
 
     const loginWaitResponse = this.page.waitForResponse(
-      'https://online.mbbank.com.vn/api/retail_web/internetbanking/v2.0/doLogin',
+      new RegExp('.*doLogin$', 'g'),
     );
 
     await this.page.getByRole('button', { name: 'Đăng nhập' }).click();
