@@ -24,6 +24,7 @@ import { CaptchaSolverModule } from './captcha-solver/captcha-solver.module';
         CAPTCHA_API_BASE_URL: Joi.string().required(),
         REDIS_HOST: Joi.string().required(),
         REDIS_PORT: Joi.number().required(),
+        SERVICE_DOMAIN: Joi.string().domain().optional(),
       }),
     }),
     PaymentConfigModule,

@@ -41,7 +41,7 @@ export class ACBBankService extends Gate {
   }
 
   async login() {
-    this.browser = await playwright.chromium.launch({ headless: true });
+    this.browser = await playwright.chromium.launch({ headless: false });
     this.context = await this.browser.newContext({
       userAgent:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -104,6 +104,7 @@ export class ACBBankService extends Gate {
   async getHistory(): Promise<Payment[]> {
     if (!this.dse_sessionId) {
       await this.login();
+      await sleep(1000);
     }
     const fromDate = moment()
       .tz('Asia/Ho_Chi_Minh')
