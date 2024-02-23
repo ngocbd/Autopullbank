@@ -8,8 +8,18 @@ import axios from 'axios';
 @Injectable()
 export class DiscordBot extends Bot {
   async sendMessage(payment: Payment) {
+    let content = `🔊 +${Format3Dot(payment.amount)} ${payment.content}`;
+    content += `\r\n💰 Số tiền: *${Format3Dot(payment.amount)}*`;
+    content += `\r\n📇 Nội dung: **${payment.content}**`;
+    content += `\r\n💳 Tài khoản: ${payment.account_receiver} (${payment.gate})`;
+    content += `\r\n📅 Thời gian: ${moment
+      .tz(payment.date, 'Asia/Ho_Chi_Minh')
+      .format('HH:mm DD/MM/YYYY')}`;
+      content += `\r\n🗃 Transaction id: ${payment.transaction_id}`;
+      content += `\r\n---`;
+
     let message = {
-      "content": "",
+      "content": content,
       "tts": false,
       "embeds": [
         {
