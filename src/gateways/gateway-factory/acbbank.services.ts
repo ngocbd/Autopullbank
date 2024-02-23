@@ -104,6 +104,7 @@ export class ACBBankService extends Gate {
   async getHistory(): Promise<Payment[]> {
     if (!this.dse_sessionId) {
       await this.login();
+      await sleep(1000);
     }
     const fromDate = moment()
       .tz('Asia/Ho_Chi_Minh')

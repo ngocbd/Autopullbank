@@ -8,9 +8,12 @@ import * as moment from 'moment-timezone';
 import { Format3Dot } from 'src/shards/helpers/format3Dot';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GATEWAY_START_CRON, GATEWAY_STOP_CRON } from 'src/shards/events';
+import { nanoid } from 'nanoid';
+
 @Injectable()
 export class TelegramBot extends Bot {
   private readonly bot: TelegramBotSDK;
+
   constructor(
     protected botConfig: BotConfig,
     protected readonly configService: ConfigService,
@@ -18,7 +21,24 @@ export class TelegramBot extends Bot {
   ) {
     super(botConfig, configService, eventEmitter);
 
-    this.bot = new TelegramBotSDK(botConfig.token, { polling: true });
+    const SERVICE_DOMAIN = configService.get<string | undefined>(
+      'SERVICE_DOMAIN',
+    );
+    const TELE_SECRET_TOKEN = nanoid(21);
+    this.bot = new TelegramBotSDK(botConfig.token, {
+      polling: !!SERVICE_DOMAIN,
+    });
+
+    if (SERVICE_DOMAIN) {
+      this.bot.setWebHook(`https://${SERVICE_DOMAIN}/bot/${botConfig.token}`, {
+        secret_token: TELE_SECRET_TOKEN,
+      });
+      this.eventEmitter.on('tele:update', ({ update, token, secretToken }) => {
+        if (secretToken !== TELE_SECRET_TOKEN || token !== botConfig.token)
+          return;
+        this.bot.processUpdate(update);
+      });
+    }
     this.bot.on('message', (msg) => {
       const chatId = msg.chat.id;
       const userId = msg.from.id.toString();
