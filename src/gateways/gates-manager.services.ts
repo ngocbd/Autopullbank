@@ -48,7 +48,7 @@ export class GatesManagerService implements OnApplicationBootstrap {
       password: Joi.string().required(),
       // login_id required if type is ACBBank
       login_id: Joi.string().when('type', {
-        is: [GateType.ACBBANK, GateType.MBBANK],
+        is: [GateType.ACBBANK, GateType.MBBANK, GateType.TPBANK],
         then: Joi.required(),
       }),
       token: Joi.string(),

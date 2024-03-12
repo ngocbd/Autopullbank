@@ -1,5 +1,6 @@
 import { MBBankService } from './mbbank.services';
 import { ACBBankService } from './acbbank.services';
+import { TPBankService } from './tpbank.services';
 import { GateConfig, GateType } from '../gate.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Gate } from '../gates.services';
@@ -12,6 +13,9 @@ export class GateFactory {
     captchaSolver: CaptchaSolverService,
   ): Gate {
     switch (config.type) {
+      case GateType.TPBANK:
+        const tpbank = new TPBankService(config, eventEmitter, captchaSolver);
+        return tpbank;
       case GateType.MBBANK:
         const mbbank = new MBBankService(config, eventEmitter, captchaSolver);
         return mbbank;
