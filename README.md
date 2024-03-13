@@ -423,6 +423,8 @@ export enum GateType {
 
 Dự án này không thể tồn tại mà không có sự hỗ trợ và cống hiến của cộng đồng. Xin chân thành cảm ơn tất cả những người đã đóng góp vào việc phát triển và cải thiện mã nguồn này.
 
-[@nhayhoc](https://gitlab.com/nhayhoc) - Discord, Telegram, Webhook, MB bank, Acb bank
+[@ducmaster](https://gitlab.com/nhayhoc) - Bot (Discord, Telegram), Webhook, Mb bank, Acb bank
+
 [@chuanghiduoc](https://gitlab.com/chuanghiduoc) - Thêm cổng Tp bank
-[@TypicalShavonne](https://gitlab.com/TypicalShavonne) - Chỉnh sửa thông báo discord
+
+[@TypicalShavonne](https://gitlab.com/TypicalShavonne) - Chỉnh sửa thông báo discord embed
