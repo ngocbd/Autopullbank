@@ -5,25 +5,6 @@ import { Injectable } from '@nestjs/common';
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface TPBankTransactionDto {
-  transactionHistoryList: {
-    id: string;
-    arrangementId: string;
-    reference: string;
-    description: string;
-    bookingDate: string;
-    valueDate: string;
-    amount: string;
-    currency: 'VND';
-    creditDebitIndicator: string;
-    runningBalance: string;
-    ofsAcctNo: string;
-    dueDate: string;
-    creditorBankNameVn: string;
-    creditorBankNameEn: string;
-  }[];
-}
 @Injectable()
 export class TPBankService extends Gate {
   private accessToken: string | null | undefined;
@@ -149,15 +130,12 @@ export class TPBankService extends Gate {
         config,
       );
 
-      const transactionInfosList = response.data.transactionInfos || [];
-      console.log('oke ngon');
-      // console.log(transactionInfosList);
+      const transactionInfosList = response.data.transactionInfos || [];      
       
       // Lọc các giao dịch có creditDebitIndicator là 'CRDT'
       const filteredTransactions = transactionInfosList.filter(
-        (transactionInfos) => transactionInfos.creditDebitIndicator === 'CRDT',
-      );
-
+        transactionInfo => transactionInfo.creditDebitIndicator === 'CRDT'
+      );      
       // Chuyển đổi các giao dịch đã lọc thành định dạng mới
       const transactionsWithout = filteredTransactions.map(
         (transactionInfos) => ({
@@ -171,7 +149,6 @@ export class TPBankService extends Gate {
           gate: GateType.TPBANK,
         }),
       );
-      console.log(transactionsWithout);
       return transactionsWithout;
     } catch (error) {
       console.error('Error while fetching transaction history:', error);
