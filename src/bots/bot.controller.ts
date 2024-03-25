@@ -1,8 +1,9 @@
 import { Body, Controller, Param, Post, Req } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Payment } from 'src/gateways/gate.interface';
-import { PAYMENT_CREATED } from 'src/shards/events';
+import { GATEWAY_CRON_ERROR_STREAK, PAYMENT_CREATED } from 'src/shards/events';
 import { BotManagerService } from './bots-manager.service';
+import { GatewayErrorStreakEvent } from 'src/shards/type';
 
 @Controller('bot')
 export class BotController {
@@ -15,7 +16,10 @@ export class BotController {
   handlePaymentCreatedEvent(payments: Payment[]) {
     this.botSetupService.onPaymentsCreated(payments);
   }
-
+  @OnEvent(GATEWAY_CRON_ERROR_STREAK)
+  handleGatewayErrorStreakEvent(data: GatewayErrorStreakEvent) {
+    this.botSetupService.onGatewayErrorStreak(data);
+  }
   @Post(':token')
   async processUpdate(
     @Param('token') token: string,

@@ -33,60 +33,59 @@ export class MBBankService extends Gate {
   private sessionId: string | null | undefined;
   private deviceId: string = '';
 
-  private browser: playwright.Browser | undefined;
-  private context: playwright.BrowserContext | undefined;
-  private page: playwright.Page | undefined;
-
   private async login() {
-    this.browser = await playwright.chromium.launch({
+    const browser = await playwright.chromium.launch({
       headless: true,
     });
-    this.context = await this.browser.newContext();
-    this.page = await this.context.newPage();
-    console.log('Mb bank login...');
-    const getCaptchaWaitResponse = this.page.waitForResponse(
-      '**/retail-web-internetbankingms/getCaptchaImage',
-      { timeout: 60000 },
-    );
-    await this.page.goto('https://online.mbbank.com.vn/pl/login');
+    try {
+      const context = await browser.newContext();
+      const page = await context.newPage();
 
-    const getCaptchaJson = await getCaptchaWaitResponse.then((d) => d.json());
+      console.log('Mb bank login...');
+      const getCaptchaWaitResponse = page.waitForResponse(
+        '**/retail-web-internetbankingms/getCaptchaImage',
+        { timeout: 60000 },
+      );
+      await page.goto('https://online.mbbank.com.vn/pl/login');
 
-    const captchaText = await this.captchaSolver.solveCaptcha(
-      getCaptchaJson.imageString,
-    );
+      const getCaptchaJson = await getCaptchaWaitResponse.then((d) => d.json());
 
-    await this.page.locator('#form1').getByRole('img').click();
-    await this.page.getByPlaceholder('Tên đăng nhập').click();
-    await this.page
-      .getByPlaceholder('Tên đăng nhập')
-      .fill(this.config.login_id);
-    await this.page.getByPlaceholder('Tên đăng nhập').press('Tab');
-    await this.page
-      .getByPlaceholder('Nhập mật khẩu')
-      .fill(this.config.password);
-    await this.page.getByPlaceholder('NHẬP MÃ KIỂM TRA').click();
-    await this.page.getByPlaceholder('NHẬP MÃ KIỂM TRA').fill(captchaText);
+      const captchaText = await this.captchaSolver.solveCaptcha(
+        getCaptchaJson.imageString,
+      );
 
-    const loginWaitResponse = this.page.waitForResponse(
-      new RegExp('.*doLogin$', 'g'),
-    );
+      await page.locator('#form1').getByRole('img').click();
+      await page.getByPlaceholder('Tên đăng nhập').click();
+      await page.getByPlaceholder('Tên đăng nhập').fill(this.config.login_id);
+      await page.getByPlaceholder('Tên đăng nhập').press('Tab');
+      await page.getByPlaceholder('Nhập mật khẩu').fill(this.config.password);
+      await page.getByPlaceholder('NHẬP MÃ KIỂM TRA').click();
+      await page.getByPlaceholder('NHẬP MÃ KIỂM TRA').fill(captchaText);
 
-    await this.page.getByRole('button', { name: 'Đăng nhập' }).click();
+      const loginWaitResponse = page.waitForResponse(
+        new RegExp('.*doLogin$', 'g'),
+      );
 
-    const loginJson = await loginWaitResponse.then((d) => d.json());
+      await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
-    if (loginJson.result.responseCode == 'GW283') {
-      throw new Error('Wrong captcha');
-      //
+      const loginJson = await loginWaitResponse.then((d) => d.json());
+
+      if (loginJson.result.responseCode == 'GW283') {
+        throw new Error('Wrong captcha');
+        //
+      }
+      if (!loginJson.result.ok)
+        throw new Error(loginJson.result.message.message);
+
+      this.sessionId = loginJson.sessionId;
+      this.deviceId = loginJson.cust.deviceId;
+      await browser.close();
+      console.log('MBBankService login success');
+    } catch (error) {
+      await browser.close();
+      console.error('MBBankService login error', error);
+      throw error;
     }
-    if (!loginJson.result.ok) throw new Error(loginJson.result.message.message);
-
-    this.sessionId = loginJson.sessionId;
-    this.deviceId = loginJson.cust.deviceId;
-    await this.browser.close();
-    this.browser = undefined;
-    console.log('MBBankService login success');
   }
 
   async getHistory(): Promise<Payment[]> {
@@ -108,51 +107,63 @@ export class MBBankService extends Gate {
       refNo,
       deviceIdCommon: this.deviceId,
     };
+    try {
+      const { data } = await axios.post<MbBankTransactionDto>(
+        'https://online.mbbank.com.vn/api/retail-transactionms/transactionms/get-account-transaction-history',
 
-    const { data } = await axios.post<MbBankTransactionDto>(
-      'https://online.mbbank.com.vn/api/retail-transactionms/transactionms/get-account-transaction-history',
-
-      dataSend,
-      {
-        headers: {
-          'X-Request-Id': moment()
-            .tz('Asia/Ho_Chi_Minh')
-            .format('DDMMYYYYHHmmssSSS'),
-          'Cache-Control': 'no-cache',
-          Accept: 'application/json, text/plain, */*',
-          Authorization:
-            'Basic RU1CUkVUQUlMV0VCOlNEMjM0ZGZnMzQlI0BGR0AzNHNmc2RmNDU4NDNm',
-          Deviceid: this.deviceId,
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-          Origin: 'https://online.mbbank.com.vn',
-          Referer: 'https://online.mbbank.com.vn/',
-          Refno: refNo,
-          'Content-Type': 'application/json; charset=UTF-8',
+        dataSend,
+        {
+          headers: {
+            'X-Request-Id': moment()
+              .tz('Asia/Ho_Chi_Minh')
+              .format('DDMMYYYYHHmmssSSS'),
+            'Cache-Control': 'no-cache',
+            Accept: 'application/json, text/plain, */*',
+            Authorization:
+              'Basic RU1CUkVUQUlMV0VCOlNEMjM0ZGZnMzQlI0BGR0AzNHNmc2RmNDU4NDNm',
+            Deviceid: this.deviceId,
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+            Origin: 'https://online.mbbank.com.vn',
+            Referer: 'https://online.mbbank.com.vn/',
+            Refno: refNo,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
         },
-      },
-    );
+      );
 
-    if (data.result.responseCode === 'GW200') {
-      await this.login();
+      if (data.result.responseCode === 'GW200') {
+        throw new Error('Session expired');
+      }
+
+      if (!data.result.ok) throw new Error(data.result.message);
+
+      return data.transactionHistoryList.map((transaction) => ({
+        transaction_id: 'mbbank-' + transaction.refNo,
+        amount: Number(transaction.creditAmount),
+        content: transaction.description,
+        date: moment
+          .tz(
+            transaction.transactionDate,
+            'DD/MM/YYYY HH:mm:ss',
+            'Asia/Ho_Chi_Minh',
+          )
+          .toDate(),
+
+        account_receiver: transaction.accountNo,
+        gate: GateType.MBBANK,
+      }));
+    } catch (error) {
+      console.error(error);
+
+      try {
+        await this.login();
+      } catch (error) {
+        console.error(error);
+      }
+
+      throw error;
     }
-
-    if (!data.result.ok) throw new Error(data.result.message);
-
-    return data.transactionHistoryList.map((transaction) => ({
-      transaction_id: 'mbbank-' + transaction.refNo,
-      amount: Number(transaction.creditAmount),
-      content: transaction.description,
-      date: moment
-        .tz(
-          transaction.transactionDate,
-          'DD/MM/YYYY HH:mm:ss',
-          'Asia/Ho_Chi_Minh',
-        )
-        .toDate(),
-
-      account_receiver: transaction.accountNo,
-      gate: GateType.MBBANK,
-    }));
   }
 }
+// docker build --tag registry.gitlab.com/nhayhoc/payment-service:try-fix-relogin . && docker push  registry.gitlab.com/nhayhoc/payment-service:try-fix-relogin

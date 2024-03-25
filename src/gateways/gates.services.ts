@@ -1,7 +1,10 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GateConfig, Payment } from './gate.interface';
 import { Injectable, Logger } from '@nestjs/common';
-import { PAYMENT_HISTORY_UPDATED } from 'src/shards/events';
+import {
+  GATEWAY_CRON_ERROR_STREAK,
+  PAYMENT_HISTORY_UPDATED,
+} from 'src/shards/events';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
 import { sleep } from 'src/shards/helpers/sleep';
 
@@ -30,6 +33,28 @@ export abstract class Gate {
       payments: payments.length,
     });
   }
+
+  private errorStreak = 0;
+  private async handleError(error: any) {
+    this.logger.error(this.getName() + error);
+    await sleep(10000);
+    this.errorStreak++;
+    this.logger.error(error);
+    if (this.errorStreak > 5) {
+      this.stopCron();
+      this.eventEmitter.emit(GATEWAY_CRON_ERROR_STREAK, {
+        name: this.getName(),
+        error: error.message,
+      });
+      setTimeout(
+        () => {
+          this.errorStreak = 0;
+          this.startCron();
+        },
+        5 * 60 * 1000,
+      );
+    }
+  }
   async cron() {
     while (true) {
       if (!this.isCronRunning) {
@@ -39,10 +64,10 @@ export abstract class Gate {
 
       try {
         await this.getHistoryAndPublish();
+        this.errorStreak = 0;
         await sleep(this.config.repeat_interval_in_sec * 1000);
       } catch (error) {
-        this.logger.error(error);
-        await sleep(10000);
+        await this.handleError(error);
       }
     }
   }

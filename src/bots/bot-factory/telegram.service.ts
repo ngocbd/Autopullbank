@@ -62,7 +62,7 @@ export class TelegramBot extends Bot {
       }
     });
   }
-  async sendMessage(payment: Payment) {
+  async sendPaymentNotificationMessage(payment: Payment) {
     let message = `🔊 +${Format3Dot(payment.amount)} ${payment.content}`;
     message += `\r\n💰 Số tiền: ${Format3Dot(payment.amount)}`;
     message += `\r\n📇 Nội dung: ${payment.content}`;
@@ -73,6 +73,9 @@ export class TelegramBot extends Bot {
     message += `\r\n🗃 Transaction id: ${payment.transaction_id}`;
     message += `\r\n---`;
 
+    await this.bot.sendMessage(this.botConfig.chat_chanel_id, message);
+  }
+  async sendMessage(message: string) {
     await this.bot.sendMessage(this.botConfig.chat_chanel_id, message);
   }
 }
