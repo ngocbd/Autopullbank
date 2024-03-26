@@ -115,7 +115,10 @@ export class ACBBankService extends Gate {
       .tz('Asia/Ho_Chi_Minh')
       .subtract(14, 'days')
       .format('DD/MM/YYYY');
-    const toDate = moment().tz('Asia/Ho_Chi_Minh').format('DD/MM/YYYY');
+    const toDate = moment()
+      .add(1, 'day')
+      .tz('Asia/Ho_Chi_Minh')
+      .format('DD/MM/YYYY');
 
     const dataSend = {
       dse_sessionId: this.dse_sessionId,
