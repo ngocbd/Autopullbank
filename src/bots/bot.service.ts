@@ -5,6 +5,7 @@ import { Job, Queue, Worker } from 'bullmq';
 import { Payment } from 'src/gateways/gate.interface';
 import { CheckPaymentConditions } from 'src/shards/helpers/checkPaymentCondition';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { GatewayErrorStreakEvent } from 'src/shards/type';
 
 @Injectable()
 export abstract class Bot {
@@ -34,7 +35,7 @@ export abstract class Bot {
     const worker = new Worker(
       `bot-${this.botConfig.type}`,
       async (job: Job<Payment>) => {
-        await this.sendMessage(job.data);
+        await this.sendPaymentNotificationMessage(job.data);
       },
       { connection: this.configService.get('redis'), concurrency: 5 },
     );
@@ -57,6 +58,12 @@ export abstract class Bot {
       });
     });
   }
+  onGatewayErrorStreak(data: GatewayErrorStreakEvent) {
+    this.sendMessage(
+      `Gateway ${data.name} has error streak, error: ${data.error}`,
+    );
+  }
 
-  abstract sendMessage(payment: Payment): Promise<void>;
+  abstract sendPaymentNotificationMessage(payment: Payment): Promise<void>;
+  abstract sendMessage(message: string): Promise<void>;
 }

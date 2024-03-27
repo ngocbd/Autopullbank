@@ -7,6 +7,7 @@ import { BotFactory } from './bot-factory/bot.factory';
 import { Bot } from './bot.service';
 import { Payment } from 'src/gateways/gate.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { GatewayErrorStreakEvent } from 'src/shards/type';
 
 @Injectable()
 export class BotManagerService implements OnApplicationBootstrap {
@@ -57,5 +58,8 @@ export class BotManagerService implements OnApplicationBootstrap {
 
   onPaymentsCreated(payments: Payment[]) {
     this.bots.forEach((bot) => bot.onPaymentsCreated(payments));
+  }
+  onGatewayErrorStreak(data: GatewayErrorStreakEvent) {
+    this.bots.forEach((bot) => bot.onGatewayErrorStreak(data));
   }
 }

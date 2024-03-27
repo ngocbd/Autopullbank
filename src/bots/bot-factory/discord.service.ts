@@ -7,7 +7,7 @@ import axios from 'axios';
 
 @Injectable()
 export class DiscordBot extends Bot {
-  async sendMessage(payment: Payment) {
+  async sendPaymentNotificationMessage(payment: Payment) {
     let content = `🔊 +${Format3Dot(payment.amount)} ${payment.content}`;
     content += `\r\n💰 Số tiền: *${Format3Dot(payment.amount)}*`;
     content += `\r\n📇 Nội dung: **${payment.content}**`;
@@ -15,42 +15,53 @@ export class DiscordBot extends Bot {
     content += `\r\n📅 Thời gian: ${moment
       .tz(payment.date, 'Asia/Ho_Chi_Minh')
       .format('HH:mm DD/MM/YYYY')}`;
-      content += `\r\n🗃 Transaction id: ${payment.transaction_id}`;
-      content += `\r\n---`;
+    content += `\r\n🗃 Transaction id: ${payment.transaction_id}`;
+    content += `\r\n---`;
 
-    let message = {
-      "content": content,
-      "tts": false,
-      "embeds": [
+    const message = {
+      content: content,
+      tts: false,
+      embeds: [
         {
-          "title": "💳 (" + payment.gate + ") - " + payment.account_receiver,
-          "description": "\n",
-          "color": 2326507,
-          "fields": [
+          title: '💳 (' + payment.gate + ') - ' + payment.account_receiver,
+          description: '\n',
+          color: 2326507,
+          fields: [
             {
-              "name": "📅 Thời gian",
-              "value": moment.tz(payment.date, 'Asia/Ho_Chi_Minh').format('HH:mm DD/MM/YYYY')
+              name: '📅 Thời gian',
+              value: moment
+                .tz(payment.date, 'Asia/Ho_Chi_Minh')
+                .format('HH:mm DD/MM/YYYY'),
             },
             {
-              "name": "💰 Số tiền:",
-              "value": Format3Dot(payment.amount),
-              "inline": true
+              name: '💰 Số tiền:',
+              value: Format3Dot(payment.amount),
+              inline: true,
             },
             {
-              "name": "📇 Nội dung: ",
-              "value": "```" + payment.content + "```"
-            }
+              name: '📇 Nội dung: ',
+              value: '```' + payment.content + '```',
+            },
           ],
-          "footer": {
-            "text": "🗃 Transaction id: " + payment.transaction_id
-          }
-        }
+          footer: {
+            text: '🗃 Transaction id: ' + payment.transaction_id,
+          },
+        },
       ],
-      "components": [],
-      "actions": {}
-    }
+      components: [],
+      actions: {},
+    };
     await axios.post(
-      `https://discord.com/api/webhooks/${this.botConfig.chat_chanel_id}/${this.botConfig.token}`, message
+      `https://discord.com/api/webhooks/${this.botConfig.chat_chanel_id}/${this.botConfig.token}`,
+      message,
+    );
+  }
+  async sendMessage(message: string) {
+    await axios.post(
+      `https://discord.com/api/webhooks/${this.botConfig.chat_chanel_id}/${this.botConfig.token}`,
+      {
+        content: message,
+      },
     );
   }
 }

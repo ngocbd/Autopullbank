@@ -7,9 +7,6 @@ import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
 import { sleep } from 'src/shards/helpers/sleep';
 export class ACBBankService extends Gate {
-  private browser: playwright.Browser | undefined;
-  private context: playwright.BrowserContext | undefined;
-  private page: playwright.Page | undefined;
   private jar: _request.CookieJar;
   private request: _request.RequestPromiseAPI | undefined = undefined;
   private dse_sessionId: string | undefined;
@@ -41,64 +38,72 @@ export class ACBBankService extends Gate {
   }
 
   async login() {
-    this.browser = await playwright.chromium.launch({ headless: true });
-    this.context = await this.browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    });
-    this.page = await this.context.newPage();
+    const browser = await playwright.chromium.launch({ headless: true });
+    try {
+      const context = await browser.newContext({
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      });
+      const page = await context.newPage();
 
-    const getCaptchaWaitResponse = this.page.waitForResponse('**/Captcha.jpg');
-    await this.page.goto('https://online.acb.com.vn/acbib/Request');
-    await this.page.getByLabel('Tên truy cập').click();
-    await this.page.getByLabel('Tên truy cập').fill(this.config.login_id);
-    await this.page.getByLabel('Mật khẩu').click();
-    await this.page.getByLabel('Mật khẩu').fill(this.config.password);
-    await this.page.getByLabel('Mật khẩu').press('Tab');
+      const getCaptchaWaitResponse = page.waitForResponse('**/Captcha.jpg');
+      await page.goto('https://online.acb.com.vn/acbib/Request');
+      await page.getByLabel('Tên truy cập').click();
+      await page.getByLabel('Tên truy cập').fill(this.config.login_id);
+      await page.getByLabel('Mật khẩu').click();
+      await page.getByLabel('Mật khẩu').fill(this.config.password);
+      await page.getByLabel('Mật khẩu').press('Tab');
 
-    const getCaptchaBuffer = await getCaptchaWaitResponse.then((d) => d.body());
-    const captchaBase64 = getCaptchaBuffer.toString('base64');
-    const captchaText = await this.captchaSolver.solveCaptcha(captchaBase64);
+      const getCaptchaBuffer = await getCaptchaWaitResponse.then((d) =>
+        d.body(),
+      );
+      const captchaBase64 = getCaptchaBuffer.toString('base64');
+      const captchaText = await this.captchaSolver.solveCaptcha(captchaBase64);
 
-    await sleep(5000);
-    await this.page.locator('#security-code').fill(captchaText);
-    await this.page.locator('#security-code').press('Enter');
+      await sleep(5000);
+      await page.locator('#security-code').fill(captchaText);
+      await page.locator('#security-code').press('Enter');
 
-    const cookie = await this.context.cookies();
-    this.jar = _request.jar();
-    for (const c of cookie) {
-      this.jar.setCookie(`${c.name}=${c.value}`, 'https://' + c.domain);
+      const cookie = await context.cookies();
+      this.jar = _request.jar();
+      for (const c of cookie) {
+        this.jar.setCookie(`${c.name}=${c.value}`, 'https://' + c.domain);
+      }
+
+      const linkMyAccount = await page.getByText(this.config.account);
+      const linkMyAccountHref = await linkMyAccount.getAttribute('href');
+
+      this.request = _request.defaults({
+        jar: this.jar,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+        },
+        followRedirect: true,
+        followAllRedirects: true,
+      });
+
+      const dashboardPageHtml = await this.request.get(
+        `https://online.acb.com.vn/acbib/${linkMyAccountHref}`,
+      );
+      // await fs.promises.writeFile('acb1.1.html', dashboardPageHtml);
+
+      this.dse_sessionId =
+        /<input type="hidden" name="dse_sessionId" value="(.*?)"/gm.exec(
+          dashboardPageHtml,
+        )?.[1];
+      this.dse_processorId =
+        /<input type="hidden" name="dse_processorId" value="(.*?)"/gm.exec(
+          dashboardPageHtml,
+        )?.[1];
+
+      //close
+      await browser.close();
+    } catch (error) {
+      await browser.close();
+      console.error('ACBBankService login error', error);
+      throw error;
     }
-
-    const linkMyAccount = await this.page.getByText(this.config.account);
-    const linkMyAccountHref = await linkMyAccount.getAttribute('href');
-
-    this.request = _request.defaults({
-      jar: this.jar,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
-      },
-      followRedirect: true,
-      followAllRedirects: true,
-    });
-
-    const dashboardPageHtml = await this.request.get(
-      `https://online.acb.com.vn/acbib/${linkMyAccountHref}`,
-    );
-    // await fs.promises.writeFile('acb1.1.html', dashboardPageHtml);
-
-    this.dse_sessionId =
-      /<input type="hidden" name="dse_sessionId" value="(.*?)"/gm.exec(
-        dashboardPageHtml,
-      )?.[1];
-    this.dse_processorId =
-      /<input type="hidden" name="dse_processorId" value="(.*?)"/gm.exec(
-        dashboardPageHtml,
-      )?.[1];
-
-    //close
-    await this.browser.close();
   }
 
   async getHistory(): Promise<Payment[]> {
@@ -110,7 +115,10 @@ export class ACBBankService extends Gate {
       .tz('Asia/Ho_Chi_Minh')
       .subtract(14, 'days')
       .format('DD/MM/YYYY');
-    const toDate = moment().tz('Asia/Ho_Chi_Minh').format('DD/MM/YYYY');
+    const toDate = moment()
+      .add(1, 'day')
+      .tz('Asia/Ho_Chi_Minh')
+      .format('DD/MM/YYYY');
 
     const dataSend = {
       dse_sessionId: this.dse_sessionId,
@@ -127,7 +135,6 @@ export class ACBBankService extends Gate {
       FromDate: fromDate,
       ToDate: toDate,
     };
-    console.log({ dataSend });
 
     // await fs.promises.writeFile('acb2.2.html', historyPageHtml);
 
@@ -143,7 +150,12 @@ export class ACBBankService extends Gate {
       return payments;
     } catch (error) {
       console.error(error);
-      await this.login();
+
+      try {
+        await this.login();
+      } catch (error) {
+        console.error(error);
+      }
 
       throw error;
     }
