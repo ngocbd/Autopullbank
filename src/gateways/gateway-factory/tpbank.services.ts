@@ -157,6 +157,7 @@ export class TPBankService extends Gate {
       );
       return transactionsWithout;
     } catch (error) {
+      this.accessToken = null;
       console.error('Error while fetching transaction history:', error);
       throw new Error('Error while fetching transaction history');
     }
