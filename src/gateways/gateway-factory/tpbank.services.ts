@@ -145,7 +145,7 @@ export class TPBankService extends Gate {
           date: moment
             .tz(transactionInfos.valueDate, 'DD-MM-YYYY', 'Asia/Ho_Chi_Minh')
             .toDate(),
-          account_receiver: transactionInfos.ofsAcctNo,
+          account_receiver: this.config.account,
           gate: GateType.TPBANK,
         }),
       );
