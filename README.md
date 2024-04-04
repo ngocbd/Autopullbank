@@ -428,3 +428,5 @@ Dự án này không thể tồn tại mà không có sự hỗ trợ và cống
 [@chuanghiduoc](https://gitlab.com/chuanghiduoc) - Thêm cổng Tp bank
 
 [@TypicalShavonne](https://gitlab.com/TypicalShavonne) - Chỉnh sửa thông báo discord embed
+
+[@amadeusmz](https://gitlab.com/amadeusmz) - Fix lỗi Tp bank
