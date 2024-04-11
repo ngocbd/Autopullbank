@@ -1,5 +1,7 @@
 import axios from 'axios';
 import * as moment from 'moment-timezone';
+import * as https from 'https';
+import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 
 import { GateType, Payment } from '../gate.interface';
@@ -10,6 +12,10 @@ export class TPBankService extends Gate {
   private accessToken: string | null | undefined;
 
   private deviceId: string;
+
+  private agent = new https.Agent({
+    secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+  });
 
   makeDeviceId(t: number): string {
     let e = '';
@@ -64,7 +70,7 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/auth/login',
         dataSend,
-        config,
+        { ...config, httpsAgent: this.agent }
       );
       this.accessToken = response.data.access_token;
       if (!this.accessToken) {
@@ -127,7 +133,7 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/smart-search-presentation-service/v2/account-transactions/find',
         dataSend,
-        config,
+        { ...config, httpsAgent: this.agent }
       );
 
       const transactionInfosList = response.data.transactionInfos || [];      
@@ -151,6 +157,7 @@ export class TPBankService extends Gate {
       );
       return transactionsWithout;
     } catch (error) {
+      this.accessToken = null;
       console.error('Error while fetching transaction history:', error);
       throw new Error('Error while fetching transaction history');
     }
