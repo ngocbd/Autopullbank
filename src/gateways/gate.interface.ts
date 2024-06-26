@@ -20,4 +20,5 @@ export interface GateConfig {
   account: string;
   token: string;
   repeat_interval_in_sec: number;
+  proxy: string;
 }
