@@ -1,6 +1,7 @@
 
 export interface ProxyConfig {
   name: string;
+  schema: string;
   ip: string;
   port: string;
   username: string;

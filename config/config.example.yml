@@ -26,6 +26,7 @@ webhooks:
       account_regex: '^456$'
 proxies:
   proxy_1:
+    schema: 'http'
     ip: '0.0.0.0'
     port: '12339'
     username: 'proxyusername'
@@ -33,6 +34,7 @@ proxies:
     change_url: ''
     change_interval_in_sec: 1800
   proxy_2:
+    schema: 'https'
     ip: '0.0.0.0'
     port: '11222'
     username: 'proxyusername'
