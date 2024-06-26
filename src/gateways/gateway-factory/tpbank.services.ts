@@ -34,7 +34,10 @@ export class TPBankService extends Gate {
 
   getAgent() : any {
     if (this.proxy != null) {
-      return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+      if (this.proxy.username && this.proxy.username.length > 0) {
+        return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+      }
+      return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`);
     }
     return this.agent;
   }
