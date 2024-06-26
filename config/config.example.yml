@@ -24,6 +24,21 @@ webhooks:
     conditions:
       content_regex: '.*?'
       account_regex: '^456$'
+proxies:
+  proxy_1:
+    ip: '0.0.0.0'
+    port: '12339'
+    username: 'proxyusername'
+    password: 'proxypass'
+    change_url: ''
+    change_interval_in_sec: 1800
+  proxy_2:
+    ip: '0.0.0.0'
+    port: '11222'
+    username: 'proxyusername'
+    password: 'proxypass'
+    change_url: ''
+    change_interval_in_sec: 1800
 
 gateways:
   mb_bank_1:
@@ -32,6 +47,7 @@ gateways:
     account: '456'
     login_id: 'abc'
     repeat_interval_in_sec: 10
+    proxy: 'proxy_1'
   abc_bank_1:
     type: 'ACBBANK'
     password: '--'

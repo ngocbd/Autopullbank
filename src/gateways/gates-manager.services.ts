@@ -10,6 +10,7 @@ import { Gate } from 'src/gateways/gates.services';
 import { GateConfig, GateType } from './gate.interface';
 import * as Joi from 'joi';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
+import {ProxyService} from "../proxy/proxy.service";
 
 @Injectable()
 export class GatesManagerService implements OnApplicationBootstrap {
@@ -20,6 +21,7 @@ export class GatesManagerService implements OnApplicationBootstrap {
     private readonly gateFactory: GateFactory,
     private eventEmitter: EventEmitter2,
     private readonly captchaSolverService: CaptchaSolverService,
+    private readonly proxyService: ProxyService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -36,6 +38,7 @@ export class GatesManagerService implements OnApplicationBootstrap {
         bankConfig,
         this.eventEmitter,
         this.captchaSolverService,
+          this.proxyService,
       ),
     );
   }
@@ -53,6 +56,7 @@ export class GatesManagerService implements OnApplicationBootstrap {
       }),
       token: Joi.string(),
       account: Joi.string().required(),
+      proxy: Joi.string()
     });
 
     for (const bankConfig of banksConfig) {

@@ -6,6 +6,7 @@ import { Injectable } from '@nestjs/common';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
+import {HttpsProxyAgent} from "https-proxy-agent";
 
 @Injectable()
 export class TPBankService extends Gate {
@@ -14,7 +15,7 @@ export class TPBankService extends Gate {
   private deviceId: string;
 
   private agent = new https.Agent({
-    secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+    secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT
   });
 
   makeDeviceId(t: number): string {
@@ -29,6 +30,13 @@ export class TPBankService extends Gate {
 
   getDeviceId(): string {
     return this.makeDeviceId(45);
+  }
+
+  getAgent() : any {
+    if (this.proxy != null) {
+      return new HttpsProxyAgent(`http://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+    }
+    return this.agent;
   }
 
   private async login() {
@@ -70,7 +78,7 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/auth/login',
         dataSend,
-        { ...config, httpsAgent: this.agent }
+        { ...config, httpsAgent: this.getAgent() }
       );
       this.accessToken = response.data.access_token;
       if (!this.accessToken) {
@@ -133,7 +141,7 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/smart-search-presentation-service/v2/account-transactions/find',
         dataSend,
-        { ...config, httpsAgent: this.agent }
+  { ...config, httpsAgent: this.getAgent() }
       );
 
       const transactionInfosList = response.data.transactionInfos || [];      

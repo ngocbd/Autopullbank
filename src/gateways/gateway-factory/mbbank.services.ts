@@ -5,6 +5,7 @@ import * as playwright from 'playwright';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
+import {HttpsProxyAgent} from "https-proxy-agent";
 
 interface MbBankTransactionDto {
   refNo: string;
@@ -33,9 +34,29 @@ export class MBBankService extends Gate {
   private sessionId: string | null | undefined;
   private deviceId: string = '';
 
+  getAgent() : any {
+    if (this.proxy != null) {
+      return new HttpsProxyAgent(`http://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+    }
+    return {};
+  }
+
+  getChromProxy() {
+    if (!this.proxy) {
+      return null;
+    }
+
+    return {
+      server: `${this.proxy.ip}:${this.proxy.port}`,
+      username: this.proxy.username,
+      password: this.proxy.password
+    }
+  }
+
   private async login() {
     const browser = await playwright.chromium.launch({
       headless: true,
+      proxy: this.getChromProxy()
     });
     try {
       const context = await browser.newContext();
@@ -129,6 +150,7 @@ export class MBBankService extends Gate {
             Refno: refNo,
             'Content-Type': 'application/json; charset=UTF-8',
           },
+          httpsAgent: this.getAgent()
         },
       );
 
@@ -137,6 +159,10 @@ export class MBBankService extends Gate {
       }
 
       if (!data.result.ok) throw new Error(data.result.message);
+
+      if (!data.transactionHistoryList || data.transactionHistoryList.length < 1) {
+        return [];
+      }
 
       return data.transactionHistoryList.map((transaction) => ({
         transaction_id: 'mbbank-' + transaction.refNo,
