@@ -45,8 +45,6 @@
 
 [https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04)
 
-
-
 2. Cấu trúc thư mục
 
 ```javascript
@@ -61,8 +59,6 @@
   Lỗi đã biết:
 
 - Có thể báo lỗi không có quyền đọc file config.yml, vui lòng cấp quyền đọc
-
-
 
 3. Tạo file `.env`
 
@@ -151,16 +147,17 @@ Giải thích:
 - `conditions.content_regex` là regex nội dung giao dịch, nếu khớp thì thông báo/webhook mới được gửi đi. Ví dụ`ct /d+` khi nội dung giao dịch có dạng `ct 1342343` service sẽ gửi thông báo, khi nội dung giao dịch có dạng `kw 432423` service sẽ không gửi thông báo.
 - ``conditions.account_regex` tương tự, là regex số tài khoản nhận tiền.
 - `gateways`
-    - `mb_bank_1` là tên gateway, đặt tuỳ ý
-    - `type` có `MBBANK` | `ACBBANK` | `TPBANK`
-    - `password` pass login bank
-    - `account` stk nhận tiền
-    - `login_id` user đăng nhập bank
-    - `repeat_interval_in_sec` thời gian polling lịch sử
+  - `mb_bank_1` là tên gateway, đặt tuỳ ý
+  - `type` có `MBBANK` | `ACBBANK` | `TPBANK` | `TRON_USDT_BLOCKCHAIN`
+  - `password` pass login bank
+  - `account` stk nhận tiền hoặc địa chỉ ví tron
+  - `login_id` user đăng nhập bank
+  - `repeat_interval_in_sec` thời gian polling lịch sử
 
 6. Chạy lệnh `docker-compose up -d`
 
-NOTE: 
+NOTE:
+
 - Hãy đảm bảo **đúng thông tin đăng nhập** trước khi nhập vào service, tránh service spam dẫn tới bị khoá IP/account
 - Vào cài đặt ngân hàng tương ứng, tìm **tắt 2fa**.
 
@@ -169,8 +166,6 @@ NOTE:
 [https://acb.com.vn/](https://acb.com.vn/)
 
 [https://ebank.tpb.vn/retail/vX/](https://ebank.tpb.vn/retail/vX/)
-
-
 
 ## Bot telegram
 
@@ -236,44 +231,50 @@ notification_discord_bot:
 
 ## Webhook cho web của bạn
 
+Với config sau
+
 ```javascript
 test_webhook:
-    url: "http://192.168.1.102:3001/api/payment/callback"
-    token: "tokenafjldskjfklads"
+    url: "http://localhost:3001/api/payment/callback"
+    token: "123456789:ABCDEF"
     conditions:
       content_regex: ".*?"
       account_regex: ".*?"
 ```
 
-Khi có giao dịch mới bạn sẽ nhận được như sau![](https://wfb4kugxtf8.sg.larksuite.com/space/api/box/stream/download/asynccode/?code=ZTU1ZmQ3M2UzNTUzZDRiZjNiODU2NThmYWExODJkMzFfOFJpd015aUU2QTNjWkkxVzlLa2FjclEzNk55cXl2dDNfVG9rZW46QmhGNmJNMDBub0lzTVh4Sk1Xd2xkdG93Z0RoXzE3MTAzMTA2MjQ6MTcxMDMxNDIyNF9WNA)Mình để code web nhận ví dụ bạn có thể copy về test nhé
+Server web sẽ nhận được
 
 ```javascript
-// ví dụ đây là web của bạn
 const express = require("express");
 const app = express();
-
-// Middleware to parse JSON data
 app.use(express.json());
 
-// Handling POST request to '/api/data'
 app.post("/api/payment/callback", (req, res) => {
-  const data = req.body; // Accessing data sent in the POST request
-  console.log(data); // Logging the data to the console
-
-  // Send a response back to the client
+  const data = req.body; 
+  console.log(data); // token là do bạn config ở phần webhook, payment là thông tin giao dịch
+  //   {
+  //     token: '123456789:ABCDEF',
+  //     payment: {
+  //       transaction_id: 'tbbank-15401929546',
+  //       amount: 5000000,
+  //       content: 'nap 323523',
+  //       date: '2021-06-19T17:00:00.000Z',
+  //       account_receiver: '04381598888',
+  //       gate: 'TPBANK'
+  //     }
+  //   }
   res.status(200).send("Data received");
 });
-
-// Set the server to listen on port 3000
 app.listen(3001, () => {
   console.log("Server running on port 3001");
 });
+
 
 ```
 
 ## API
 
-`http://localhost:3000/payments`![](https://wfb4kugxtf8.sg.larksuite.com/space/api/box/stream/download/asynccode/?code=OTc5OTVhMzk4YjM1MjM3NWRlMTI2NTcxMmIyZDU1NjdfYmNURE1vY3dibWpGd2NKTWloMTFucGJIZWQxME9vaHhfVG9rZW46RkpyTWJrdDdtb3dITE54aG5USWxjQzVTZ0FwXzE3MTAzMTA2MjQ6MTcxMDMxNDIyNF9WNA)
+`http://localhost:3000/payments`
 
 ## Nếu vps bạn yếu, có thể dùng server giải captcha free của bên mình
 
@@ -281,10 +282,7 @@ app.listen(3001, () => {
 
 Từ ngày 24/2/2024, server sẽ chuyển sang [bank-captcha.payment.com.vn](http://bank-captcha.payment.com.vn)
 
-Từ ngày 30/3/2024, bank-captcha.ducmaster.com sẽ dừng hoạt động
-
 (vui lòng ko spam, ddos nhé :v)
-
 
 ```javascript
 # docker-compose.yml
@@ -325,7 +323,9 @@ Group mình mới lập, chia sẻ kiến thức làm web indie
 - Lắng nghe có giao dịch mới, `@OnEvent("payment.created")`
 
 ## Hướng dẫn đóng góp
+
 ### Chạy dự án
+
 Khởi chạy redis và server giải captcha
 
 `docker-compose -f docker-compose.dev.yml up -d`
@@ -334,13 +334,16 @@ Install package
 `pnpm install`
 
 Tạo file .env
+
 ```
 PORT=3001
 REDIS_HOST=localhost
 REDIS_PORT=6380
 CAPTCHA_API_BASE_URL=http://localhost:1234
 ```
+
 Tạo file `config/config.yml`
+
 ```yml
 bots:
 webhooks:
@@ -352,14 +355,17 @@ gateways:
     account: '--'
     repeat_interval_in_sec: 20
 ```
+
 Chạy `pnpm run start:dev`
 
 Lưu ý, các lịch sử giao dịch cũ sẽ được cache trong redis, để xoá chúng hãy làm bước sau:
+
 - Tắt app
 - Chạy lệnh `docker-compose exec redis redis-cli flushall`
 - Mở lại app
 
 ### Thêm cổng thanh toán
+
 - Tạo thêm file mới `/gateways/gateway-factory/yourgateway.services.ts`
 
 ```ts
@@ -375,13 +381,16 @@ Lưu ý, các lịch sử giao dịch cũ sẽ được cache trong redis, để
 ```
 
 - Sửa `src\gateways\gate.interface.ts`
+
 ```ts
 export enum GateType {
    MBBANK = 'MBBANK',
 +  YOUR_TYPE = 'YOUR_TYPE'
 }
 ```
+
 - Sửa factory gateway `src/gateways/gateway-factory/gate.factory.ts`
+
 ```ts
 
     switch (config.type) {
@@ -389,7 +398,9 @@ export enum GateType {
 +        const yourbank = new YourGatewayService(config, eventEmitter, captchaSolver);
 +        return yourbank;
 ```
+
 - Cập nhật validate `src/gateways/gates-manager.services.ts`
+
 ```ts
       login_id: Joi.string().when('type', {
 -       is: [GateType.ACBBANK, GateType.MBBANK, GateType.TPBANK],
@@ -423,7 +434,7 @@ export enum GateType {
 
 Dự án này không thể tồn tại mà không có sự hỗ trợ và cống hiến của cộng đồng. Xin chân thành cảm ơn tất cả những người đã đóng góp vào việc phát triển và cải thiện mã nguồn này.
 
-[@ducmaster](https://gitlab.com/nhayhoc) - Bot (Discord, Telegram), Webhook, Mb bank, Acb bank
+[@ducmaster](https://gitlab.com/nhayhoc) - Bảo trì dự án
 
 [@chuanghiduoc](https://gitlab.com/chuanghiduoc) - Thêm cổng Tp bank
 

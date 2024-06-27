@@ -38,3 +38,7 @@ gateways:
     account: '123'
     login_id: 'abc'
     repeat_interval_in_sec: 10
+  tron_usdt_1:
+    type: 'TRON_USDT_BLOCKCHAIN'
+    account: 'address here'
+    repeat_interval_in_sec: 10

@@ -5,6 +5,7 @@ import { GateConfig, GateType } from '../gate.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Gate } from '../gates.services';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
+import { TronUsdtBlockchainService } from './tron-usdt-blockchain.services';
 
 export class GateFactory {
   create(
@@ -22,6 +23,14 @@ export class GateFactory {
       case GateType.ACBBANK:
         const acbbank = new ACBBankService(config, eventEmitter, captchaSolver);
         return acbbank;
+      case GateType.TRON_USDT_BLOCKCHAIN:
+        const tronUsdtBlockchain = new TronUsdtBlockchainService(
+          config,
+          eventEmitter,
+          captchaSolver,
+        );
+        return tronUsdtBlockchain;
+
       default:
         throw new Error('Gate not found');
     }

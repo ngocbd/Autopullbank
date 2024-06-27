@@ -44,9 +44,11 @@ export class GatesManagerService implements OnApplicationBootstrap {
     const gateConfigSchema = Joi.object({
       name: Joi.string().required(),
       type: Joi.valid(...Object.values(GateType)).required(),
-      repeat_interval_in_sec: Joi.number().min(10).max(120).required(),
-      password: Joi.string().required(),
-      // login_id required if type is ACBBank
+      repeat_interval_in_sec: Joi.number().min(1).max(120).required(),
+      password: Joi.string().when('type', {
+        is: [GateType.TPBANK, GateType.MBBANK, GateType.ACBBANK],
+        then: Joi.required(),
+      }),
       login_id: Joi.string().when('type', {
         is: [GateType.ACBBANK, GateType.MBBANK, GateType.TPBANK],
         then: Joi.required(),
@@ -58,7 +60,9 @@ export class GatesManagerService implements OnApplicationBootstrap {
     for (const bankConfig of banksConfig) {
       const { error } = gateConfigSchema.validate(bankConfig);
       if (error) {
-        throw error;
+        throw new Error(
+          `config.yml is invalid: ${error.message} on ${bankConfig.name}`,
+        );
       }
     }
   }

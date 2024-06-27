@@ -2,6 +2,7 @@ export enum GateType {
   MBBANK = 'MBBANK',
   ACBBANK = 'ACBBANK',
   TPBANK = 'TPBANK',
+  TRON_USDT_BLOCKCHAIN = 'TRON_USDT_BLOCKCHAIN',
 }
 export interface Payment {
   transaction_id: string;
