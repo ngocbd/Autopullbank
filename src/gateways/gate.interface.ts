@@ -2,6 +2,7 @@ export enum GateType {
   MBBANK = 'MBBANK',
   ACBBANK = 'ACBBANK',
   TPBANK = 'TPBANK',
+  VCBBANK = 'VCBBANK',
   TRON_USDT_BLOCKCHAIN = 'TRON_USDT_BLOCKCHAIN',
 }
 export interface Payment {
@@ -22,4 +23,5 @@ export interface GateConfig {
   token: string;
   repeat_interval_in_sec: number;
   proxy: string;
+  device_id?: string;
 }

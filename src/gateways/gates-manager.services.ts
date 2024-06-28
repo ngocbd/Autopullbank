@@ -10,7 +10,7 @@ import { Gate } from 'src/gateways/gates.services';
 import { GateConfig, GateType } from './gate.interface';
 import * as Joi from 'joi';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
-import {ProxyService} from "../proxy/proxy.service";
+import { ProxyService } from '../proxy/proxy.service';
 
 @Injectable()
 export class GatesManagerService implements OnApplicationBootstrap {
@@ -38,7 +38,7 @@ export class GatesManagerService implements OnApplicationBootstrap {
         bankConfig,
         this.eventEmitter,
         this.captchaSolverService,
-          this.proxyService,
+        this.proxyService,
       ),
     );
   }
@@ -49,16 +49,30 @@ export class GatesManagerService implements OnApplicationBootstrap {
       type: Joi.valid(...Object.values(GateType)).required(),
       repeat_interval_in_sec: Joi.number().min(1).max(120).required(),
       password: Joi.string().when('type', {
-        is: [GateType.TPBANK, GateType.MBBANK, GateType.ACBBANK],
+        is: [
+          GateType.MBBANK,
+          GateType.ACBBANK,
+          GateType.TPBANK,
+          GateType.VCBBANK,
+        ],
         then: Joi.required(),
       }),
       login_id: Joi.string().when('type', {
-        is: [GateType.ACBBANK, GateType.MBBANK, GateType.TPBANK],
+        is: [
+          GateType.MBBANK,
+          GateType.ACBBANK,
+          GateType.TPBANK,
+          GateType.VCBBANK,
+        ],
+        then: Joi.required(),
+      }),
+      device_id: Joi.string().when('type', {
+        is: [GateType.VCBBANK],
         then: Joi.required(),
       }),
       token: Joi.string(),
       account: Joi.string().required(),
-      proxy: Joi.string()
+      proxy: Joi.string(),
     });
 
     for (const bankConfig of banksConfig) {

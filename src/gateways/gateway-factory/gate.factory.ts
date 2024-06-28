@@ -7,6 +7,7 @@ import { Gate } from '../gates.services';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
 import { ProxyService } from '../../proxy/proxy.service';
 import { TronUsdtBlockchainService } from './tron-usdt-blockchain.services';
+import { VCBBankService } from './vcb/vcbbank.services';
 
 export class GateFactory {
   create(
@@ -40,6 +41,14 @@ export class GateFactory {
           proxies,
         );
         return acbbank;
+      case GateType.VCBBANK:
+        const vcbbank = new VCBBankService(
+          config,
+          eventEmitter,
+          captchaSolver,
+          proxies,
+        );
+        return vcbbank;
       case GateType.TRON_USDT_BLOCKCHAIN:
         const tronUsdtBlockchain = new TronUsdtBlockchainService(
           config,
