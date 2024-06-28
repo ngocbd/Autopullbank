@@ -11,7 +11,7 @@ export class PaymentConfigService {
     const config = YAML.parse(configText);
     return config;
   }
-  async getConfigPath<T>(key: 'bots' | 'webhooks' | 'gateways') {
+  async getConfigPath<T>(key: 'bots' | 'webhooks' | 'gateways' | 'proxies') {
     const ymlConfig = await this.getConfig();
 
     const ymlWebhooks = ymlConfig[key] as {

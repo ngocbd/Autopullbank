@@ -5,6 +5,7 @@ import { GateConfig, GateType } from '../gate.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Gate } from '../gates.services';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
+import { ProxyService } from '../../proxy/proxy.service';
 import { TronUsdtBlockchainService } from './tron-usdt-blockchain.services';
 
 export class GateFactory {
@@ -12,16 +13,32 @@ export class GateFactory {
     config: GateConfig,
     eventEmitter: EventEmitter2,
     captchaSolver: CaptchaSolverService,
+    proxies: ProxyService,
   ): Gate {
     switch (config.type) {
       case GateType.TPBANK:
-        const tpbank = new TPBankService(config, eventEmitter, captchaSolver);
+        const tpbank = new TPBankService(
+          config,
+          eventEmitter,
+          captchaSolver,
+          proxies,
+        );
         return tpbank;
       case GateType.MBBANK:
-        const mbbank = new MBBankService(config, eventEmitter, captchaSolver);
+        const mbbank = new MBBankService(
+          config,
+          eventEmitter,
+          captchaSolver,
+          proxies,
+        );
         return mbbank;
       case GateType.ACBBANK:
-        const acbbank = new ACBBankService(config, eventEmitter, captchaSolver);
+        const acbbank = new ACBBankService(
+          config,
+          eventEmitter,
+          captchaSolver,
+          proxies,
+        );
         return acbbank;
       case GateType.TRON_USDT_BLOCKCHAIN:
         const tronUsdtBlockchain = new TronUsdtBlockchainService(

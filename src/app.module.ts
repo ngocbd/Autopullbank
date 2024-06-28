@@ -9,6 +9,7 @@ import configuration from './configuration';
 import { BotModule } from './bots/bots.module';
 import { queueUIMiddleware } from './shards/middlewares/queues.middleware';
 import { CaptchaSolverModule } from './captcha-solver/captcha-solver.module';
+import {ProxyModule} from "./proxy/proxy.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CaptchaSolverModule } from './captcha-solver/captcha-solver.module';
     WebhookModule,
     BotModule,
     CaptchaSolverModule,
+    ProxyModule
   ],
   providers: [],
 })
