@@ -22,7 +22,12 @@
 
 - Sử dụng bullmq đảm bảo webhook, thông báo được gửi đi.
 
-- Ngân hàng hỗ trợ: Mb Bank, Tp Bank, Acb Bank.
+- Ngân hàng hỗ trợ:
+  - VCB Bank: Full API
+  - TP Bank: Full API
+  - MB Bank: Lấy lịch sử qua API, Đăng nhập qua headless browser
+  - ACB Bank: Lấy lịch sử qua API, Đăng nhập qua headless browser
+  - USDT (Tron): Full API
 
 ![image info](./docs/a.png)
 
@@ -118,6 +123,15 @@ bots:
     conditions:
       content_regex: ".*?"
       account_regex: ".*?"
+proxies:
+  proxy_1:
+    schema: 'http'
+    ip: '0.0.0.0'
+    port: '12339'
+    username: 'proxyusername'
+    password: 'proxypass'
+    change_url: ''
+    change_interval_in_sec: 1800
 webhooks:
   test_webhook:
     url: "http://192.168.1.102:3001/api/payment/callback"
@@ -133,12 +147,15 @@ gateways:
     account: "stk nhan tien"
     login_id: "ten dang nhap bank"
     repeat_interval_in_sec: 20
-  # abc_bank_1:
-  #   type: 'ACBBANK'
-  #   password: '--'
-  #   account: '123'
-  #   login_id: 'abc'
-  #   repeat_interval_in_sec: 10
+  # vcb_bank_1:
+  #   type: 'VCBBANK'
+  #   password: 'bank password'
+  #   account: 'stk nhan tien'
+  #   login_id: 'ten dang nhap'
+  #   device_id: 'huong dan lay phia duoi'
+  #   repeat_interval_in_sec: 20
+  #   proxy: 'proxy_1'
+
 
 ```
 
@@ -153,6 +170,8 @@ Giải thích:
   - `account` stk nhận tiền hoặc địa chỉ ví tron
   - `login_id` user đăng nhập bank
   - `repeat_interval_in_sec` thời gian polling lịch sử
+  - `device_id` yêu cầu để không cần otp đăng nhập đối với VCB
+  - `proxy`: tên proxy (nếu có)
 
 6. Chạy lệnh `docker-compose up -d`
 
@@ -166,6 +185,30 @@ NOTE:
 [https://acb.com.vn/](https://acb.com.vn/)
 
 [https://ebank.tpb.vn/retail/vX/](https://ebank.tpb.vn/retail/vX/)
+
+[https://vcbdigibank.vietcombank.com.vn/auth](https://vcbdigibank.vietcombank.com.vn/auth)
+
+## Proxy
+
+Hiện support các proxy có dạng host:port tĩnh, và có thể xoay thông qua url.
+
+```yml
+proxies:
+  proxy_1:
+    schema: 'http'
+    ip: 'ip.mproxy.vn'
+    port: '12343'
+    username: 'username'
+    password: 'key-pass'
+    change_url: 'https://mproxy.vn/capi/token/key/key-pass/resetIp'
+    change_interval_in_sec: 1800
+```
+
+## VCB
+
+Cần lấy device_id của browser mà bạn đã từng login bằng otp trước đó để tránh Vcb yêu cầu otp lại
+
+Vào đây để lấy [https://payment.com.vn/get-vcb-device-id.html](https://payment.com.vn/get-vcb-device-id.html)
 
 ## Bot telegram
 
