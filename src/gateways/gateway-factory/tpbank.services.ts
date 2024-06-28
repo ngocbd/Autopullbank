@@ -6,17 +6,14 @@ import { Injectable } from '@nestjs/common';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
-import {HttpsProxyAgent} from "https-proxy-agent";
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { sleep } from 'src/shards/helpers/sleep';
 
 @Injectable()
 export class TPBankService extends Gate {
   private accessToken: string | null | undefined;
 
   private deviceId: string;
-
-  private agent = new https.Agent({
-    secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT
-  });
 
   makeDeviceId(t: number): string {
     let e = '';
@@ -32,14 +29,20 @@ export class TPBankService extends Gate {
     return this.makeDeviceId(45);
   }
 
-  getAgent() : any {
+  getAgent() {
     if (this.proxy != null) {
       if (this.proxy.username && this.proxy.username.length > 0) {
-        return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+        return new HttpsProxyAgent(
+          `${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`,
+        );
       }
-      return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`);
+      return new HttpsProxyAgent(
+        `${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`,
+      );
     }
-    return this.agent;
+    return new https.Agent({
+      secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+    });
   }
 
   private async login() {
@@ -81,7 +84,7 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/auth/login',
         dataSend,
-        { ...config, httpsAgent: this.getAgent() }
+        { ...config, httpsAgent: this.getAgent() },
       );
       this.accessToken = response.data.access_token;
       if (!this.accessToken) {
@@ -144,15 +147,15 @@ export class TPBankService extends Gate {
       const response = await axios.post(
         'https://ebank.tpb.vn/gateway/api/smart-search-presentation-service/v2/account-transactions/find',
         dataSend,
-  { ...config, httpsAgent: this.getAgent() }
+        { ...config, httpsAgent: this.getAgent() },
       );
 
-      const transactionInfosList = response.data.transactionInfos || [];      
-      
+      const transactionInfosList = response.data.transactionInfos || [];
+
       // Lọc các giao dịch có creditDebitIndicator là 'CRDT'
       const filteredTransactions = transactionInfosList.filter(
-        transactionInfo => transactionInfo.creditDebitIndicator === 'CRDT'
-      );      
+        (transactionInfo) => transactionInfo.creditDebitIndicator === 'CRDT',
+      );
       // Chuyển đổi các giao dịch đã lọc thành định dạng mới
       const transactionsWithout = filteredTransactions.map(
         (transactionInfos) => ({
@@ -168,8 +171,18 @@ export class TPBankService extends Gate {
       );
       return transactionsWithout;
     } catch (error) {
-      this.accessToken = null;
       console.error('Error while fetching transaction history:', error);
+
+      if (
+        error.message.includes(
+          'Client network socket disconnected before secure TLS connection was established',
+        )
+      ) {
+        await sleep(10000);
+      } else {
+        this.accessToken = null;
+      }
+
       throw new Error('Error while fetching transaction history');
     }
   }

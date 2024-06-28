@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { Injectable } from '@nestjs/common';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
+import * as https from 'https';
+import * as crypto from 'crypto';
 
 interface TronTransaction {
   data: TronTransactionData[];
@@ -37,24 +40,52 @@ export class TronUsdtBlockchainService extends Gate {
   private exchangeRateUsdtToVnd: number = 0;
   private exchangeRateUsdtToVNdLastUpdate: number = 0;
 
+  getAgent() {
+    if (this.proxy != null) {
+      if (this.proxy.username && this.proxy.username.length > 0) {
+        return new HttpsProxyAgent(
+          `${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`,
+        );
+      }
+      return new HttpsProxyAgent(
+        `${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`,
+      );
+    }
+    return new https.Agent({
+      secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+    });
+  }
+
   private async updateExchangeRate() {
-    if (Date.now() - this.exchangeRateUsdtToVNdLastUpdate < 1000 * 60) {
+    if (Date.now() - this.exchangeRateUsdtToVNdLastUpdate < 1000 * 30) {
       return;
     }
 
-    const { data } = await axios.get<{
-      tether: {
-        vnd: number;
-      };
-    }>(
-      `https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=vnd`,
-    );
+    try {
+      const { data } = await axios.get<{
+        tether: {
+          vnd: number;
+        };
+      }>(
+        `https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=vnd`,
+        {
+          httpsAgent: this.getAgent(),
+        },
+      );
 
-    this.exchangeRateUsdtToVnd = data.tether.vnd;
-    console.log(
-      'Updated exchange rate tether to vnd:',
-      this.exchangeRateUsdtToVnd,
-    );
+      this.exchangeRateUsdtToVnd = data.tether.vnd;
+      this.exchangeRateUsdtToVNdLastUpdate = Date.now();
+      console.log(
+        'Updated exchange rate tether to vnd:',
+        this.exchangeRateUsdtToVnd,
+      );
+    } catch (error: any) {
+      console.error(
+        'Error while fetching exchange rate: ' + error.message,
+        error,
+      );
+      throw new Error('Error while fetching exchange rate');
+    }
   }
 
   usdtToVnd(usdt: number): number {
@@ -69,11 +100,16 @@ export class TronUsdtBlockchainService extends Gate {
     return usdt;
   }
   async getHistory(): Promise<Payment[]> {
-    await this.updateExchangeRate();
-
     try {
+      await this.updateExchangeRate();
       const transactions = await axios.get<TronTransaction>(
         `https://api.trongrid.io/v1/accounts/${this.config.account}/transactions/trc20`,
+        {
+          httpsAgent: this.getAgent(),
+          // headers: {
+          //   'TRON-PRO-API-KEY': '91cba7d4-7939-49cc-af68-3491d2131f25',
+          // },
+        },
       );
 
       const transactionFilterUsdtAndInbound = transactions.data.data.filter(

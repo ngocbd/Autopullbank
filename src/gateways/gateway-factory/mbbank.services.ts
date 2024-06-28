@@ -5,7 +5,8 @@ import * as playwright from 'playwright';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
-import {HttpsProxyAgent} from "https-proxy-agent";
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { sleep } from 'src/shards/helpers/sleep';
 
 interface MbBankTransactionDto {
   refNo: string;
@@ -34,38 +35,73 @@ export class MBBankService extends Gate {
   private sessionId: string | null | undefined;
   private deviceId: string = '';
 
-  getAgent() : any {
+  getAgent() {
     if (this.proxy != null) {
       if (this.proxy.username && this.proxy.username.length > 0) {
-        return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`);
+        return new HttpsProxyAgent(
+          `${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`,
+        );
       }
-      return new HttpsProxyAgent(`${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`);
+      return new HttpsProxyAgent(
+        `${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`,
+      );
     }
-    return {};
+    return undefined;
   }
 
   getChromProxy() {
     if (!this.proxy) {
-      return null;
+      return undefined;
     }
 
     return {
       server: `${this.proxy.ip}:${this.proxy.port}`,
       username: this.proxy.username,
-      password: this.proxy.password
-    }
+      password: this.proxy.password,
+    };
   }
 
   private async login() {
     const browser = await playwright.chromium.launch({
       headless: true,
-      proxy: this.getChromProxy()
+      proxy: this.getChromProxy(),
     });
     try {
       const context = await browser.newContext();
       const page = await context.newPage();
 
       console.log('Mb bank login...');
+
+      // Tiết kiệm băng thông
+      if (this.proxy)
+        await page.route('**/*', async (route) => {
+          const url = route.request().url();
+          const resourceType = route.request().resourceType();
+
+          if (url.includes('/retail-web-internetbankingms/getCaptchaImage'))
+            return route.continue();
+
+          if (['image', 'media'].includes(resourceType)) {
+            return route.abort();
+          }
+
+          if (![`xhr`, `fetch`, `document`].includes(resourceType)) {
+            try {
+              const response = await axios.get(url, {
+                responseType: 'arraybuffer',
+              });
+              return route.fulfill({
+                status: response.status,
+                headers: response.headers as any,
+                body: response.data,
+              });
+            } catch (error) {
+              return route.abort();
+            }
+          }
+          route.continue();
+        });
+
       const getCaptchaWaitResponse = page.waitForResponse(
         '**/retail-web-internetbankingms/getCaptchaImage',
         { timeout: 60000 },
@@ -89,7 +125,7 @@ export class MBBankService extends Gate {
       const loginWaitResponse = page.waitForResponse(
         new RegExp('.*doLogin$', 'g'),
       );
-
+      await sleep(1000);
       await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
       const loginJson = await loginWaitResponse.then((d) => d.json());
@@ -153,7 +189,7 @@ export class MBBankService extends Gate {
             Refno: refNo,
             'Content-Type': 'application/json; charset=UTF-8',
           },
-          httpsAgent: this.getAgent()
+          httpsAgent: this.getAgent(),
         },
       );
 
@@ -163,7 +199,10 @@ export class MBBankService extends Gate {
 
       if (!data.result.ok) throw new Error(data.result.message);
 
-      if (!data.transactionHistoryList || data.transactionHistoryList.length < 1) {
+      if (
+        !data.transactionHistoryList ||
+        data.transactionHistoryList.length < 1
+      ) {
         return [];
       }
 
@@ -186,7 +225,15 @@ export class MBBankService extends Gate {
       console.error(error);
 
       try {
-        await this.login();
+        if (
+          error.message.includes(
+            'Client network socket disconnected before secure TLS connection was established',
+          )
+        ) {
+          await sleep(10000);
+        } else {
+          await this.login();
+        }
       } catch (error) {
         console.error(error);
       }

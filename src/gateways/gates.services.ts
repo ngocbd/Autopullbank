@@ -7,19 +7,19 @@ import {
 } from 'src/shards/events';
 import { CaptchaSolverService } from 'src/captcha-solver/captcha-solver.service';
 import { sleep } from 'src/shards/helpers/sleep';
-import {ProxyService} from "../proxy/proxy.service";
-import {ProxyConfig} from "../proxy/proxy.interfaces";
+import { ProxyService } from '../proxy/proxy.service';
+import { ProxyConfig } from '../proxy/proxy.interfaces';
 
 @Injectable()
 export abstract class Gate {
   private isCronRunning = true;
   private logger = new Logger(Gate.name);
-  protected proxy : ProxyConfig;
+  protected proxy: ProxyConfig;
   constructor(
     protected readonly config: GateConfig,
     protected readonly eventEmitter: EventEmitter2,
     protected readonly captchaSolver: CaptchaSolverService,
-    protected readonly proxies : ProxyService,
+    protected readonly proxies: ProxyService,
   ) {
     this.cron();
   }
@@ -35,11 +35,13 @@ export abstract class Gate {
     }
     const payments = await this.getHistory();
     this.eventEmitter.emit(PAYMENT_HISTORY_UPDATED, payments);
-    this.logger.log({
-      label: 'CronInfo',
-      type: this.config.type,
-      payments: payments.length,
-    });
+    this.logger.log(
+      JSON.stringify({
+        label: 'CronInfo',
+        type: this.config.type,
+        payments: payments.length,
+      }),
+    );
   }
 
   private errorStreak = 0;

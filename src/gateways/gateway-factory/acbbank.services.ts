@@ -6,11 +6,57 @@ import { GateType, Payment } from '../gate.interface';
 
 import { Gate } from '../gates.services';
 import { sleep } from 'src/shards/helpers/sleep';
+import axios from 'axios';
 export class ACBBankService extends Gate {
   private jar: _request.CookieJar;
   private request: _request.RequestPromiseAPI | undefined = undefined;
   private dse_sessionId: string | undefined;
   private dse_processorId: string | undefined;
+  private user_agent: string | undefined;
+  getProxyString() {
+    if (this.proxy) {
+      if (this.proxy.username && this.proxy.username.length > 0) {
+        return `${this.proxy.schema}://${this.proxy.username}:${this.proxy.password}@${this.proxy.ip}:${this.proxy.port}`;
+      }
+      return `${this.proxy.schema}://${this.proxy.ip}:${this.proxy.port}`;
+    }
+    return undefined;
+  }
+
+  getChromProxy() {
+    if (!this.proxy) {
+      return undefined;
+    }
+
+    return {
+      server: `${this.proxy.ip}:${this.proxy.port}`,
+      username: this.proxy.username,
+      password: this.proxy.password,
+    };
+  }
+
+  async randomUserAgent(): Promise<string> {
+    const replaceNumberWithRandomNumber = (str: string) => {
+      return str
+        .replace(/\d{2}/g, () =>
+          Math.floor(Math.random() * 100)
+            .toString()
+            .padStart(2, '0'),
+        )
+        .replace(/\d{3}/g, () =>
+          Math.floor(Math.random() * 1000)
+            .toString()
+            .padStart(3, '0'),
+        );
+    };
+    return (
+      'Mozilla/5.0 (Windows NT 10.0; Windows; x64)' +
+      replaceNumberWithRandomNumber(
+        ' AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36',
+      )
+    );
+  }
+
   parseAcbHistory(html: string): Payment[] {
     const document = parse(html);
     const table = document.getElementById('table1');
@@ -38,13 +84,46 @@ export class ACBBankService extends Gate {
   }
 
   async login() {
-    const browser = await playwright.chromium.launch({ headless: true });
+    const browser = await playwright.chromium.launch({
+      headless: true,
+      proxy: this.getChromProxy(),
+    });
+    this.user_agent = await this.randomUserAgent();
     try {
       const context = await browser.newContext({
-        userAgent:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        userAgent: this.user_agent,
       });
       const page = await context.newPage();
+
+      // Tiết kiệm băng thông
+      if (this.proxy)
+        await page.route('**/*', async (route) => {
+          const url = route.request().url();
+          const resourceType = route.request().resourceType();
+
+          if (url.includes('Captcha.jpg')) {
+            return route.continue();
+          }
+          if (['image', 'media'].includes(resourceType)) {
+            return route.abort();
+          }
+
+          if (![`xhr`, `fetch`, `document`].includes(resourceType)) {
+            try {
+              const response = await axios.get(url, {
+                responseType: 'arraybuffer',
+              });
+              return route.fulfill({
+                status: response.status,
+                headers: {},
+                body: response.data,
+              });
+            } catch (error) {
+              return route.abort();
+            }
+          }
+          route.continue();
+        });
 
       const getCaptchaWaitResponse = page.waitForResponse('**/Captcha.jpg');
       await page.goto('https://online.acb.com.vn/acbib/Request');
@@ -64,27 +143,26 @@ export class ACBBankService extends Gate {
       await page.locator('#security-code').fill(captchaText);
       await page.locator('#security-code').press('Enter');
 
+      const linkMyAccount = await page.getByText(this.config.account);
+      const linkMyAccountHref = await linkMyAccount.getAttribute('href');
+
       const cookie = await context.cookies();
       this.jar = _request.jar();
       for (const c of cookie) {
         this.jar.setCookie(`${c.name}=${c.value}`, 'https://' + c.domain);
       }
-
-      const linkMyAccount = await page.getByText(this.config.account);
-      const linkMyAccountHref = await linkMyAccount.getAttribute('href');
-
       this.request = _request.defaults({
         jar: this.jar,
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+          'User-Agent': this.user_agent,
         },
         followRedirect: true,
         followAllRedirects: true,
       });
 
-      const dashboardPageHtml = await this.request.get(
+      const dashboardPageHtml = await this.request(
         `https://online.acb.com.vn/acbib/${linkMyAccountHref}`,
+        { proxy: this.getProxyString() },
       );
       // await fs.promises.writeFile('acb1.1.html', dashboardPageHtml);
 
@@ -136,15 +214,14 @@ export class ACBBankService extends Gate {
       ToDate: toDate,
     };
 
-    // await fs.promises.writeFile('acb2.2.html', historyPageHtml);
-
     try {
-      const historyPageHtml = await this.request.post(
-        'https://online.acb.com.vn/acbib/Request',
-        {
-          form: dataSend,
-        },
-      );
+      const historyPageHtml = await this.request({
+        uri: 'https://online.acb.com.vn/acbib/Request',
+        method: 'POST',
+        form: dataSend,
+        proxy: this.getProxyString(),
+      });
+      // await fs.promises.writeFile('acb2.2.html', historyPageHtml);
 
       const payments = this.parseAcbHistory(historyPageHtml);
       return payments;

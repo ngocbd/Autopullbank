@@ -45,6 +45,7 @@ export class GateFactory {
           config,
           eventEmitter,
           captchaSolver,
+          proxies,
         );
         return tronUsdtBlockchain;
 

@@ -333,6 +333,9 @@ Khởi chạy redis và server giải captcha
 Install package
 `pnpm install`
 
+Install playwright
+`pnpm playwright install`
+
 Tạo file .env
 
 ```
