@@ -26,7 +26,7 @@ export class TelegramBot extends Bot {
     );
     const TELE_SECRET_TOKEN = nanoid(21);
     this.bot = new TelegramBotSDK(botConfig.token, {
-      polling: !!SERVICE_DOMAIN,
+      polling: SERVICE_DOMAIN ? false : true,
     });
 
     if (SERVICE_DOMAIN) {
