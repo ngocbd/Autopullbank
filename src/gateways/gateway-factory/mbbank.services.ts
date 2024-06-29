@@ -91,6 +91,7 @@ export class MBBankService extends Gate {
             'Content-Type': 'application/json; charset=UTF-8',
             'X-Request-Id': captchaReqId,
           },
+          httpsAgent: this.getAgent(),
         },
       );
 
@@ -127,6 +128,7 @@ export class MBBankService extends Gate {
               .tz('Asia/Ho_Chi_Minh')
               .format('DDMMYYYYHHmmssSSS'),
           },
+          httpsAgent: this.getAgent(),
         },
       );
 
