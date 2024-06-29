@@ -25,7 +25,7 @@
 - Ngân hàng hỗ trợ:
   - VCB Bank: Full API
   - TP Bank: Full API
-  - MB Bank: Lấy lịch sử qua API, Đăng nhập qua headless browser
+  - MB Bank: Full API
   - ACB Bank: Lấy lịch sử qua API, Đăng nhập qua headless browser
   - USDT (Tron): Full API
 
