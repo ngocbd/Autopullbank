@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PAYMENT_CREATED } from 'src/shards/events';
 import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class PaymentService implements OnApplicationBootstrap {
@@ -35,14 +36,37 @@ export class PaymentService implements OnApplicationBootstrap {
       (el) => el.transaction_id == payment.transaction_id,
     );
   }
+
+  /**
+   * Vì một số bank không trả về thời gian, nên nếu thời gian trả về là 00:00:00 của ngày hiện tại thì sẽ thay thế bằng giờ hiện tại
+   * @param date Date
+   * @returns Date
+   */
+  replaceDateTodayAndNoTime = (date: Date): Date => {
+    const dateMoment = moment.tz(date, 'Asia/Ho_Chi_Minh');
+    const dateNow = moment().tz('Asia/Ho_Chi_Minh');
+    const dateNoTime =
+      dateMoment.get('hour') == 0 &&
+      dateMoment.get('minute') == 0 &&
+      dateMoment.get('second') == 0;
+
+    if (dateMoment.isSame(dateNow, 'day') && dateNoTime) {
+      return new Date();
+    }
+    return date;
+  };
   addPayments(payments: Payment[]) {
     const newPayments = payments.filter((payment) => !this.isExists(payment));
+    const replaceDateTimeNewPayments = newPayments.map((payment) => ({
+      ...payment,
+      date: this.replaceDateTodayAndNoTime(payment.date),
+    }));
 
-    if (newPayments.length == 0) return;
+    if (replaceDateTimeNewPayments.length == 0) return;
 
-    this.eventEmitter.emit(PAYMENT_CREATED, newPayments);
+    this.eventEmitter.emit(PAYMENT_CREATED, replaceDateTimeNewPayments);
 
-    this.payments.push(...newPayments);
+    this.payments.push(...replaceDateTimeNewPayments);
 
     this.payments = this.payments
       .slice(-500)

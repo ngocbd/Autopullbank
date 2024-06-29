@@ -163,7 +163,7 @@ export class TPBankService extends Gate {
           amount: Number(transactionInfos.amount),
           content: transactionInfos.description,
           date: moment
-            .tz(transactionInfos.valueDate, 'DD-MM-YYYY', 'Asia/Ho_Chi_Minh')
+            .tz(transactionInfos.valueDate, 'YYYY-MM-DD', 'Asia/Ho_Chi_Minh')
             .toDate(),
           account_receiver: this.config.account,
           gate: GateType.TPBANK,
