@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as moment from 'moment-timezone';
 import { Injectable } from '@nestjs/common';
-import * as playwright from 'playwright';
+import { createHash } from 'node:crypto';
 
 import { GateType, Payment } from '../gate.interface';
 import { Gate } from '../gates.services';
@@ -33,7 +33,7 @@ interface MbBankTransactionDto {
 @Injectable()
 export class MBBankService extends Gate {
   private sessionId: string | null | undefined;
-  private deviceId: string = '';
+  private deviceId: string;
 
   getAgent() {
     if (this.proxy != null) {
@@ -62,87 +62,82 @@ export class MBBankService extends Gate {
   }
 
   private async login() {
-    const browser = await playwright.chromium.launch({
-      headless: true,
-      proxy: this.getChromProxy(),
-    });
     try {
-      const context = await browser.newContext();
-      const page = await context.newPage();
-
-      console.log('Mb bank login...');
-
-      // Tiết kiệm băng thông
-      if (this.proxy)
-        await page.route('**/*', async (route) => {
-          const url = route.request().url();
-          const resourceType = route.request().resourceType();
-
-          if (url.includes('/retail-web-internetbankingms/getCaptchaImage'))
-            return route.continue();
-
-          if (['image', 'media'].includes(resourceType)) {
-            return route.abort();
-          }
-
-          if (![`xhr`, `fetch`, `document`].includes(resourceType)) {
-            try {
-              const response = await axios.get(url, {
-                responseType: 'arraybuffer',
-              });
-              return route.fulfill({
-                status: response.status,
-                headers: response.headers as any,
-                body: response.data,
-              });
-            } catch (error) {
-              return route.abort();
-            }
-          }
-          route.continue();
-        });
-
-      const getCaptchaWaitResponse = page.waitForResponse(
-        '**/retail-web-internetbankingms/getCaptchaImage',
-        { timeout: 60000 },
-      );
-      await page.goto('https://online.mbbank.com.vn/pl/login');
-
-      const getCaptchaJson = await getCaptchaWaitResponse.then((d) => d.json());
-
-      const captchaText = await this.captchaSolver.solveCaptcha(
-        getCaptchaJson.imageString,
-      );
-
-      await page.locator('#form1').getByRole('img').click();
-      await page.getByPlaceholder('Tên đăng nhập').click();
-      await page.getByPlaceholder('Tên đăng nhập').fill(this.config.login_id);
-      await page.getByPlaceholder('Tên đăng nhập').press('Tab');
-      await page.getByPlaceholder('Nhập mật khẩu').fill(this.config.password);
-      await page.getByPlaceholder('NHẬP MÃ KIỂM TRA').click();
-      await page.getByPlaceholder('NHẬP MÃ KIỂM TRA').fill(captchaText);
-
-      const loginWaitResponse = page.waitForResponse(
-        new RegExp('.*doLogin$', 'g'),
-      );
-      await sleep(1000);
-      await page.getByRole('button', { name: 'Đăng nhập' }).click();
-
-      const loginJson = await loginWaitResponse.then((d) => d.json());
-
-      if (loginJson.result.responseCode == 'GW283') {
-        throw new Error('Wrong captcha');
-        //
+      if (!this.deviceId) {
+        this.deviceId =
+          's1rmi184-mbib-0000-0000-' +
+          moment().format(
+            'YYYYMMDDHHmmss' + moment().millisecond().toString().slice(0, -1),
+          );
       }
+
+      const captchaReqId = moment()
+        .tz('Asia/Ho_Chi_Minh')
+        .format('DDMMYYYYHHmmssSSS');
+
+      const captcha = await axios.post(
+        'https://online.mbbank.com.vn/retail-web-internetbankingms/getCaptchaImage',
+        { sessionId: '', refNo: captchaReqId, deviceIdCommon: this.deviceId },
+        {
+          headers: {
+            'Cache-Control': 'no-cache',
+            Accept: 'application/json, text/plain, */*',
+            Authorization:
+              'Basic RU1CUkVUQUlMV0VCOlNEMjM0ZGZnMzQlI0BGR0AzNHNmc2RmNDU4NDNm',
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+            Origin: 'https://online.mbbank.com.vn',
+            Referer: 'https://online.mbbank.com.vn/',
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Request-Id': captchaReqId,
+          },
+        },
+      );
+
+      const captchaValue = await this.captchaSolver.solveCaptcha(
+        captcha.data.imageString,
+      );
+
+      const { data: loginJson } = await axios.post(
+        'https://online.mbbank.com.vn/retail_web/internetbanking/doLogin',
+        {
+          userId: this.config.login_id,
+          password: createHash('md5')
+            .update(this.config.password)
+            .digest('hex'),
+          captcha: captchaValue,
+          sessionId: '',
+          refNo:
+            this.config.account.toUpperCase() +
+            moment().tz('Asia/Ho_Chi_Minh').format('DDMMYYYYHHmmssSSS'),
+          deviceIdCommon: this.deviceId,
+        },
+        {
+          headers: {
+            'Cache-Control': 'no-cache',
+            Accept: 'application/json, text/plain, */*',
+            Authorization:
+              'Basic RU1CUkVUQUlMV0VCOlNEMjM0ZGZnMzQlI0BGR0AzNHNmc2RmNDU4NDNm',
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+            Origin: 'https://online.mbbank.com.vn',
+            Referer: 'https://online.mbbank.com.vn/',
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Request-Id': moment()
+              .tz('Asia/Ho_Chi_Minh')
+              .format('DDMMYYYYHHmmssSSS'),
+          },
+        },
+      );
+
       if (!loginJson.result.ok)
         throw new Error(loginJson.result.message.message);
 
       this.sessionId = loginJson.sessionId;
       this.deviceId = loginJson.cust.deviceId;
-      await browser.close();
+
       console.log('MBBankService login success');
     } catch (error) {
-      await browser.close();
       console.error('MBBankService login error', error);
       throw error;
     }
